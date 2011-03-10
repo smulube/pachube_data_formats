@@ -16,8 +16,8 @@ describe "default datastream templates" do
       json[:version].should == "1.0.0"
       json[:at].should == @datastream.updated.iso8601(6)
       json[:current_value].should == @datastream.current_value
-      json[:max_value].should == @datastream.max_value
-      json[:min_value].should == @datastream.min_value
+      json[:max_value].should == @datastream.max_value.to_s
+      json[:min_value].should == @datastream.min_value.to_s
       json[:tags].should == @datastream.tags.split(',').map(&:strip).sort{|a,b| a.downcase <=> b.downcase}
       json[:unit].should == {
         :type => @datastream.unit_type,
@@ -32,8 +32,8 @@ describe "default datastream templates" do
       json[:version].should == "0.6-alpha"
       json[:values].first[:recorded_at].should == @datastream.updated.iso8601
       json[:values].first[:value].should == @datastream.current_value
-      json[:values].first[:max_value].should == @datastream.max_value
-      json[:values].first[:min_value].should == @datastream.min_value
+      json[:values].first[:max_value].should == @datastream.max_value.to_s
+      json[:values].first[:min_value].should == @datastream.min_value.to_s
       json[:tags].should == @datastream.tags.split(',').map(&:strip).sort{|a,b| a.downcase <=> b.downcase}
       json[:unit].should == {
         :type => @datastream.unit_type,
@@ -54,6 +54,30 @@ describe "default datastream templates" do
       json[:tags].should be_nil
     end
 
+    it "should ignore tags if blank (1.0.0)" do
+      @datastream.tags = []
+      json = @datastream.generate_json("1.0.0")
+      json[:tags].should be_nil
+    end
+
+    it "should ignore tags if blank (0.6-alpha)" do
+      @datastream.tags = []
+      json = @datastream.generate_json("0.6-alpha")
+      json[:tags].should be_nil
+    end
+
+    it "should ignore nil unit elements (1.0.0)" do
+      @datastream.unit_symbol = nil
+      json = @datastream.generate_json("1.0.0")
+      json[:unit][:symbol].should be_nil
+    end
+
+    it "should ignore nil unit elements (0.6-alpha)" do
+      @datastream.unit_symbol = nil
+      json = @datastream.generate_json("0.6-alpha")
+      json[:unit][:symbol].should be_nil
+    end
+
     it "should ignore unit if none of the elements are set (1.0.0)" do
       @datastream.unit_label = nil
       @datastream.unit_symbol = nil
@@ -66,6 +90,22 @@ describe "default datastream templates" do
       @datastream.unit_label = nil
       @datastream.unit_symbol = nil
       @datastream.unit_type = nil
+      json = @datastream.generate_json("0.6-alpha")
+      json[:unit].should be_nil
+    end
+
+    it "should ignore unit if all the elements are blank (1.0.0)" do
+      @datastream.unit_label = ''
+      @datastream.unit_symbol = ''
+      @datastream.unit_type = ''
+      json = @datastream.generate_json("1.0.0")
+      json[:unit].should be_nil
+    end
+
+    it "should ignore unit if all the elements are blank (0.6-alpha)" do
+      @datastream.unit_label = ''
+      @datastream.unit_symbol = ''
+      @datastream.unit_type = ''
       json = @datastream.generate_json("0.6-alpha")
       json[:unit].should be_nil
     end
