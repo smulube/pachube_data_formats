@@ -22,6 +22,7 @@ ActiveRecord::Schema.define(:version => 0) do
   create_table "datastreams", :force => true do |t|
     t.string   "stream_id", :null => false
     t.integer  "feed_id", :null => false
+    t.string   "feed_creator"
     t.string   "current_value"
     t.float    "min_value"
     t.float    "max_value"
@@ -31,5 +32,11 @@ ActiveRecord::Schema.define(:version => 0) do
     t.string   "tags"
     t.datetime "updated"
   end
+
+  create_table "datapoints", :force => true do |t|
+    t.datetime "at"
+    t.string   "value"    
+    t.integer  "datastream_id", :null => false
+  end    
 end
 

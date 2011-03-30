@@ -9,18 +9,16 @@ You can use it to prepare data for sending to Pachube or for parsing data receiv
 Allowed inputs
 --------------
 
- * XML (Pachube EEML) - Not Yet Implemented
+ * XML (Pachube EEML)
  * JSON
- * CSV - Not Yet Implemented
- * Hash
+ * CSV
 
 Outputs
 -------
 
- * XML (Pachube EEML) - Not Yet Implemented
- * JSON - Version 2 JSON
- * CSV - Not Yet Implemented
- * Hash
+ * XML (Pachube EEML)
+ * JSON
+ * CSV
 
 ActiveRecord support
 --------------------
@@ -38,7 +36,21 @@ Attribute to Pachube field mapping in progress.
       is_pachube_data_format :feed
     end
 
-    feed.to_pachube_json # converts your feed and associated datastreams into Pachube V2 JSON
+### Provided methods
+  
+    @pachube_feed = feed.to_pachube # returns an instance of PachubeDataFormats::Feed
+    @pachube_feed.to_json(:version => "1.0.0") # converts your feed and associated datastreams into Pachube V2 JSON
+    @pachube_feed.as_json(:version => "0.6-alpha") # provides a json hash for 0.6-alpha
+    @pachube_feed.to_xml(:version => "0.5.1") # converts your feed and associated datastreams into Pachube V2 XML (EEML)
+
+### Supported formats
+
+ * JSON "1.0.0" - used by Pachube API v2
+ * JSON "0.6-alpha" - used by Pachube API v1
+ * XML "0.5.1" - used by Pachube API v2
+ * XML "5" - used by Pachube API v1
+ * CSV v1 - used by Pachube API v1
+ * CSV v2 - used by Pachube API v2
 
 ### Mapped fields
 
@@ -50,16 +62,13 @@ By default the gem expects your object to have the following fields:
 
 #### Feeds
 
- * feed
  * creator
- * title
- * website
- * icon
+ * datastreams
  * description
- * updated
  * email
- * private
- * tags
+ * feed
+ * icon
+ * id
  * location_disposition
  * location_domain
  * location_ele
@@ -67,18 +76,35 @@ By default the gem expects your object to have the following fields:
  * location_lat
  * location_lon
  * location_name
+ * private
+ * status
+ * tags
+ * title
+ * updated
+ * website
+
 
 #### Datastreams
 
- * id
  * current_value
- * min_value
+ * datapoints
+ * feed_creator
+ * feed_id
+ * id
  * max_value
- * unit_label
- * unit_type
- * unit_symbol
+ * min_value
  * tags
+ * unit_label
+ * unit_symbol
+ * unit_type
  * updated
+ 
+#### Datapoints
+
+ * at
+ * value
+ * feed_id
+ * datastream_id
 
 If you use different field names, want to map custom fields or want to map fields onto instance methods you can:
 
@@ -108,5 +134,5 @@ Examples
       #      <title>Pachube Office Environment</title>
       #    </environment>
       #  </eeml>
-    feed.to_hash # {:title => "Pachube Office Environment"}
+    feed.attributes # {:title => "Pachube Office Environment"}
 
