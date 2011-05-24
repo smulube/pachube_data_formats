@@ -4,8 +4,6 @@ module PachubeDataFormats
     attr_accessor :presentation
     attr_accessor :output
 
-    undef_method :id
-
     def initialize(subject, presentation, &block)
       @subject = subject
       @presentation = presentation
@@ -22,8 +20,12 @@ module PachubeDataFormats
       @output[sym] = nil
     end
 
-    def output!
-      @output.reject {|k,v| v.nil? || v.blank?}
+    def id
+      method_missing(:id)
+    end
+
+    def output!(options = {})
+      !options[:include_blank] ? @output.reject {|k,v| v.nil? || v.blank?} : @output
     end
   end
 end

@@ -3,9 +3,8 @@ require File.dirname(__FILE__) + '/../spec_helper'
 describe PachubeDataFormats::Feed do
 
   it "should have a constant that defines the allowed keys" do
-    PachubeDataFormats::Feed::ALLOWED_KEYS.should == %w(creator datastreams description email feed icon id location_disposition location_domain location_ele location_exposure location_lat location_lon location_name private status tags title updated website)
+    PachubeDataFormats::Feed::ALLOWED_KEYS.should == %w(creator datastreams description email feed icon id location_disposition location_domain location_ele location_exposure location_lat location_lon location_name private status tags title updated website auto_feed_url)
   end
-
 
   context "attr accessors" do
     before(:each) do
@@ -47,21 +46,38 @@ describe PachubeDataFormats::Feed do
     end
   end
 
+  describe "validation" do
+    %w(title).each do |field|
+      it "should require a '#{field}'" do
+        feed = PachubeDataFormats::Feed.new
+        feed.send("#{field}=".to_sym, nil)
+        feed.should_not be_valid
+        feed.errors[field.to_sym].should == ["can't be blank"]
+      end
+    end
+  end
+
   describe "#initialize" do
-    it "should require one parameter" do
-      lambda{PachubeDataFormats::Feed.new}.should raise_exception(ArgumentError, "wrong number of arguments (0 for 1)")
+    it "should create a blank slate when passed no arguments" do
+      feed = PachubeDataFormats::Feed.new
+      PachubeDataFormats::Feed::ALLOWED_KEYS.each do |attr|
+        feed.attributes[attr.to_sym].should be_nil
+      end
     end
 
-    it "should accept json" do
-      feed = PachubeDataFormats::Feed.new(feed_as_(:json))
-      feed.title.should == "Pachube Office Environment"
-    end
+    %w(xml json hash).each do |format|
+      it "should accept #{format}" do
+        feed = PachubeDataFormats::Feed.new(feed_as_(format.to_sym))
+        feed.title.downcase.should == "pachube office environment"
+      end
 
-    it "should accept a hash of attributes" do
-      feed = PachubeDataFormats::Feed.new(feed_as_(:hash))
-      feed.title.should == "Pachube Office Environment"
+      %w(to_csv as_json to_xml to_json attributes).each do |output_format|
+        it "should be able to output from #{format} using #{output_format}" do
+          feed = PachubeDataFormats::Feed.new(feed_as_(format.to_sym))
+          lambda {feed.send(output_format.to_sym)}.should_not raise_error
+        end
+      end
     end
-
   end
 
   describe "#attributes" do
@@ -113,6 +129,11 @@ describe PachubeDataFormats::Feed do
           ds.should be_kind_of(PachubeDataFormats::Datastream)
         end
       end
+
+      it "should default to an empty array" do
+        feed = PachubeDataFormats::Feed.new({})
+        feed.datastreams.should == []
+      end
     end
 
     describe "#datastreams=" do
@@ -120,9 +141,9 @@ describe PachubeDataFormats::Feed do
         @feed = PachubeDataFormats::Feed.new({})
       end
 
-      it "should return nil if not an array" do
+      it "should return an empty array if not an array" do
         @feed.datastreams = "kittens"
-        @feed.datastreams.should be_nil
+        @feed.datastreams.should be_empty
       end
 
       it "should accept an array of datastreams and hashes and store an array of datastreams" do
@@ -151,6 +172,16 @@ describe PachubeDataFormats::Feed do
         @feed.datastreams = datastreams_hash
         @feed.datastreams.should == [new_datastream]
       end
+
+      it "should accept an array of subclass of datastream and store an array of datastreams" do
+        class OurSpecialDatastreamClass < PachubeDataFormats::Datastream
+          attr_accessor :something_new
+        end
+
+        datastreams = [OurSpecialDatastreamClass.new(datastream_as_(:hash))]
+        @feed.datastreams = datastreams
+        @feed.datastreams.should == datastreams
+      end
     end
 
   end
@@ -160,7 +191,7 @@ describe PachubeDataFormats::Feed do
     it "should take a version and generate the appropriate template" do
       feed = PachubeDataFormats::Feed.new({})
       PachubeDataFormats::Template.should_receive(:new).with(feed, :json)
-      lambda {feed.generate_json("1.0.0")}.should raise_error(NoMethodError)
+      lambda {feed.generate_json("1.0.0", {})}.should raise_error(NoMethodError)
     end
   end
 
@@ -189,14 +220,14 @@ describe PachubeDataFormats::Feed do
   describe "#to_xml" do
     it "should call the xml generator with default version" do
       feed = PachubeDataFormats::Feed.new({})
-      feed.should_receive(:generate_xml).with("0.5.1").and_return("<xml></xml>")
+      feed.should_receive(:generate_xml).with("0.5.1", {}).and_return("<xml></xml>")
       feed.to_xml.should == "<xml></xml>"
     end
 
     it "should accept optional xml version" do
       version = "5"
       feed = PachubeDataFormats::Feed.new({})
-      feed.should_receive(:generate_xml).with(version).and_return("<xml></xml>")
+      feed.should_receive(:generate_xml).with(version, {}).and_return("<xml></xml>")
       feed.to_xml(:version => version).should == "<xml></xml>"
     end
   end
@@ -204,14 +235,14 @@ describe PachubeDataFormats::Feed do
   describe "#as_json" do
     it "should call the json generator with default version" do
       feed = PachubeDataFormats::Feed.new({})
-      feed.should_receive(:generate_json).with("1.0.0").and_return({"title" => "Environment"})
+      feed.should_receive(:generate_json).with("1.0.0", {}).and_return({"title" => "Environment"})
       feed.as_json.should == {"title" => "Environment"}
     end
 
     it "should accept optional json version" do
       version = "0.6-alpha"
       feed = PachubeDataFormats::Feed.new({})
-      feed.should_receive(:generate_json).with(version).and_return({"title" => "Environment"})
+      feed.should_receive(:generate_json).with(version, {}).and_return({"title" => "Environment"})
       feed.as_json(:version => version).should == {"title" => "Environment"}
     end
   end

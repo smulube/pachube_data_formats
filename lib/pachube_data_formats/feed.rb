@@ -1,6 +1,6 @@
 module PachubeDataFormats
   class Feed
-    ALLOWED_KEYS = %w(creator datastreams description email feed icon id location_disposition location_domain location_ele location_exposure location_lat location_lon location_name private status tags title updated website)
+    ALLOWED_KEYS = %w(creator datastreams description email feed icon id location_disposition location_domain location_ele location_exposure location_lat location_lon location_name private status tags title updated website auto_feed_url)
     ALLOWED_KEYS.each { |key| attr_accessor(key.to_sym) }
 
     include PachubeDataFormats::Templates::JSON::FeedDefaults
@@ -9,10 +9,21 @@ module PachubeDataFormats
     include PachubeDataFormats::Parsers::JSON::FeedDefaults
     include PachubeDataFormats::Parsers::XML::FeedDefaults
 
-    def initialize(input)
+    include Validations
+
+    def valid?
+      pass = true
+      if title.blank?
+        errors[:title] = ["can't be blank"]
+        pass = false
+      end
+      return pass
+    end
+
+    def initialize(input = {})
       if input.is_a?(Hash)
         self.attributes = input
-      elsif input.strip.first == "{"
+      elsif input.strip[0...1].to_s == "{"
         self.attributes = from_json(input)
       else
         self.attributes = from_xml(input)
@@ -26,6 +37,11 @@ module PachubeDataFormats
         h[key] = value unless value.nil?
       end
       return h
+    end
+
+    def datastreams
+      return [] if @datastreams.nil?
+      @datastreams
     end
 
     def attributes=(input)
@@ -48,7 +64,7 @@ module PachubeDataFormats
 
     def as_json(options = {})
       options[:version] ||= "1.0.0"
-      generate_json(options[:version])
+      generate_json(options.delete(:version), options)
     end
 
     def to_json(options = {})
@@ -57,7 +73,7 @@ module PachubeDataFormats
 
     def to_xml(options = {})
       options[:version] ||= "0.5.1"
-      generate_xml(options[:version])
+      generate_xml(options.delete(:version), options)
     end
 
     def to_csv(options = {})

@@ -1,13 +1,18 @@
 module PachubeDataFormats
   class SearchResult
-    ALLOWED_KEYS = %w(totalResults startIndex itemsPerPage feeds)
+    ALLOWED_KEYS = %w(totalResults startIndex itemsPerPage results)
     ALLOWED_KEYS.each { |key| attr_accessor(key.to_sym) }
 
     include PachubeDataFormats::Templates::JSON::SearchResultDefaults
     include PachubeDataFormats::Templates::XML::SearchResultDefaults
+    include PachubeDataFormats::Parsers::JSON::SearchResultDefaults
 
-    def initialize(input)
-      self.attributes = input
+    def initialize(input = {})
+      if input.is_a?(Hash)
+        self.attributes = input
+      elsif input.strip[0...1].to_s == "{"
+        self.attributes = from_json(input)
+      end
     end
 
     def attributes
@@ -25,14 +30,14 @@ module PachubeDataFormats
       return attributes
     end
 
-    def feeds=(array)
+    def results=(array)
       return unless array.is_a?(Array)
-      @feeds = []
+      @results = []
       array.each do |feed|
         if feed.is_a?(Feed)
-          @feeds << feed
+          @results << feed
         elsif feed.is_a?(Hash)
-          @feeds << Feed.new(feed)
+          @results << Feed.new(feed)
         end
       end
     end

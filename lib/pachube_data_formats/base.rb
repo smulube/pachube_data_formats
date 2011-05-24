@@ -1,16 +1,14 @@
-require 'pachube_data_formats/active_record/instance_methods'
+require 'pachube_data_formats/base/instance_methods'
 
 module PachubeDataFormats
-  # Adds core methods to ActiveRecord
+  # Provide an interface for your model objects by extending this module:
+  # extend PachubeDataFormats::Base
   #
+  # This provides the following configuration class method:
   # is_pachube_data_format:
   #   - specifies that this model represents all or part of a Pachube feed
-  module ActiveRecord
-    def self.included(base)
-      base.send :extend, ClassMethods
-    end
+  module Base
 
-    module ClassMethods
       # Provides methods for converting between the different Pachube API data formats
       # An example for a model representing a Pachube feed:
       #
@@ -25,22 +23,30 @@ module PachubeDataFormats
       #   is_pachube_data_format :feed, {:title => :my_custom_instance_method, :status => :determine_feed_state}
       #
       def is_pachube_data_format(klass, options = {})
-        cattr_accessor :pachube_data_format_mappings
-        cattr_accessor :pachube_data_format_class
-        self.pachube_data_format_mappings = options
+        @options = options
         case klass
         when :feed
-          self.pachube_data_format_class = PachubeDataFormats::Feed
+          @pachube_data_format_class = PachubeDataFormats::Feed
         when :datastream
-          self.pachube_data_format_class = PachubeDataFormats::Datastream
+          @pachube_data_format_class = PachubeDataFormats::Datastream
         when :datapoint
-          self.pachube_data_format_class = PachubeDataFormats::Datapoint
+          @pachube_data_format_class = PachubeDataFormats::Datapoint
         else
-          self.pachube_data_format_class = nil
+          @pachube_data_format_class = nil
         end
-        send :include, PachubeDataFormats::ActiveRecord::InstanceMethods
+
+        class << self
+          def pachube_data_format_mappings
+            @options
+          end
+
+          def pachube_data_format_class
+            @pachube_data_format_class
+          end
+        end
+
+        send :include, PachubeDataFormats::Base::InstanceMethods
       end
-    end
   end
 end
 

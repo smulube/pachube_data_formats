@@ -1,22 +1,22 @@
 module PachubeDataFormats
-  class Datapoint
-    ALLOWED_KEYS = %w(at value feed_id datastream_id)
+  class Trigger
+    ALLOWED_KEYS = %w(threshold_value user notified_at url trigger_type id environment_id stream_id)
     ALLOWED_KEYS.each { |key| attr_accessor(key.to_sym) }
 
-    include PachubeDataFormats::Templates::JSON::DatapointDefaults
-    include PachubeDataFormats::Templates::XML::DatapointDefaults
-    include PachubeDataFormats::Templates::CSV::DatapointDefaults
-    include PachubeDataFormats::Parsers::JSON::DatapointDefaults
-    include PachubeDataFormats::Parsers::XML::DatapointDefaults
+    include PachubeDataFormats::Templates::JSON::TriggerDefaults
+    include PachubeDataFormats::Parsers::JSON::TriggerDefaults
+    include PachubeDataFormats::Parsers::XML::TriggerDefaults
 
-    # validates_presence_of :datastream_id
-    # validates_presence_of :value
-    
+    # validates_presence_of :url
+    # validates_presence_of :stream_id
+    # validates_presence_of :environment_id
+    # validates_presence_of :user
+
     include Validations
 
     def valid?
       pass = true
-      [:datastream_id, :value].each do |attr|
+      [:url, :stream_id, :environment_id, :user].each do |attr|
         if self.send(attr).blank?
           errors[attr] = ["can't be blank"]
           pass = false
@@ -26,7 +26,7 @@ module PachubeDataFormats
     end
 
     def initialize(input = {})
-      if input.is_a? Hash
+      if input.is_a?(Hash)
         self.attributes = input
       elsif input.strip[0...1].to_s == "{"
         self.attributes = from_json(input)
@@ -45,24 +45,21 @@ module PachubeDataFormats
     end
 
     def attributes=(input)
+      return if input.nil?
       ALLOWED_KEYS.each { |key| self.send("#{key}=", input[key]) }
+      return attributes
     end
 
     def as_json(options = {})
-      generate_json(options[:version])
+      generate_json
     end
 
     def to_json(options = {})
       ::JSON.generate as_json(options)
     end
 
-    def to_xml(options = {})
-      generate_xml(options[:version])
-    end
 
-    def to_csv(options = {})
-      generate_csv(options.delete(:version), options)
-    end
   end
 end
+
 

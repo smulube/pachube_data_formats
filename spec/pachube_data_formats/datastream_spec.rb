@@ -6,24 +6,96 @@ describe PachubeDataFormats::Datastream do
     PachubeDataFormats::Datastream::ALLOWED_KEYS.should == %w(current_value datapoints feed_creator feed_id id max_value min_value tags unit_label unit_symbol unit_type updated)
   end
 
+  describe "validation" do
+    before(:each) do
+      @datastream = PachubeDataFormats::Datastream.new
+    end
+
+    %w(id).each do |field|
+      it "should require a '#{field}'" do
+        @datastream.send("#{field}=".to_sym, nil)
+        @datastream.should_not be_valid
+        @datastream.errors[field.to_sym].should include("can't be blank")
+      end
+    end
+
+    ["red hat", "foo*", "KYB:FOO"].each do |invalid_id|
+      it "should not allow '#{invalid_id}' as an id" do
+        @datastream.id = invalid_id
+        @datastream.should_not be_valid
+        @datastream.errors[:id].should include("is invalid")
+      end
+    end
+
+    ["current_to_direction-degrees_true-1", "current_to_direction.degrees_true.1"].each do |valid_id|
+      it "should allow '#{valid_id}' as an id" do
+        @datastream.id = valid_id
+        @datastream.should be_valid
+        @datastream.errors[:id].should be_empty
+      end
+
+    end
+
+    %w(current_value tags).each do |field|
+      it "should restrict '#{field}' field length to 255" do
+        @datastream.send("#{field}=".to_sym, "a"*256)
+        @datastream.should_not be_valid
+        @datastream.errors[field.to_sym].should == ["is too long (maximum is 255 characters)"]
+      end
+    end
+
+    it "should not allow arrays of 255 entries for tags" do
+      @datastream.tags = []
+      254.times {@datastream.tags << 'a'}
+      @datastream.should_not be_valid
+      @datastream.errors[:tags].should == ["is too long (maximum is 255 characters)"]
+    end
+
+    %w(unit_type current_value).each do |field|
+      it "should allow blank '#{field}'" do
+        @datastream.send("#{field}=".to_sym, nil)
+        @datastream.valid?
+        @datastream.errors[field.to_sym].should be_blank
+      end
+    end
+
+    %w(basicSI derivedSI conversionBasedUnits derivedUnits contextDependentUnits).each do |valid_unit_type|
+      it "should allow unit_type of '#{valid_unit_type}'" do
+        @datastream.unit_type = valid_unit_type
+        @datastream.valid?
+        @datastream.errors[:unit_type].should be_blank
+      end
+    end
+
+    %w(baicSI deriedSI conversinBasedUnits deriedUnits cotextDependentUnits).each do |invalid_unit_type|
+      it "should not allow unit_type of '#{invalid_unit_type}'" do
+        @datastream.unit_type = invalid_unit_type
+        @datastream.valid?
+        @datastream.errors[:unit_type].should == ["is not a valid unit_type (pick one from #{PachubeDataFormats::Datastream::VALID_UNIT_TYPES.join(', ')} or leave blank)"]
+      end
+    end
+  end
+
   describe "#initialize" do
-    it "should require one parameter" do
-      lambda{PachubeDataFormats::Datastream.new}.should raise_exception(ArgumentError, "wrong number of arguments (0 for 1)")
+    it "should create a blank slate when passed no arguments" do
+      datastream = PachubeDataFormats::Datastream.new
+      PachubeDataFormats::Datastream::ALLOWED_KEYS.each do |attr|
+        datastream.attributes[attr.to_sym].should be_nil
+      end
     end
 
-    it "should accept xml" do
-      datastream = PachubeDataFormats::Datastream.new(datastream_as_(:xml))
-      datastream.current_value.should == "14"
-    end
+    %w(xml json hash).each do |format|
+      it "should accept #{format}" do
+        datastream = PachubeDataFormats::Datastream.new(datastream_as_(format.to_sym))
+        datastream.current_value.should == "14"
+      end
 
-    it "should accept json" do
-      datastream = PachubeDataFormats::Datastream.new(datastream_as_(:json))
-      datastream.current_value.should == "14"
-    end
-
-    it "should accept a hash of attributes" do
-      datastream = PachubeDataFormats::Datastream.new(datastream_as_(:hash))
-      datastream.current_value.should == "14"
+      %w(to_csv as_json to_xml to_json attributes).each do |output_format|
+        it "should be able to output from #{format} using #{output_format}" do
+          datastream = PachubeDataFormats::Datastream.new(datastream_as_(format.to_sym))
+          lambda {datastream.send(output_format.to_sym)}.should_not raise_error
+        end
+      end
     end
   end
 
@@ -155,13 +227,13 @@ describe PachubeDataFormats::Datastream do
 
     it "should call the xml generator with default version" do
       datastream = PachubeDataFormats::Datastream.new({})
-      datastream.should_receive(:generate_xml).with("0.5.1").and_return("<xml></xml>")
+      datastream.should_receive(:generate_xml).with("0.5.1", {}).and_return("<xml></xml>")
       datastream.to_xml.should == "<xml></xml>"
     end
 
     it "should accept optional xml version" do
       datastream = PachubeDataFormats::Datastream.new({})
-      datastream.should_receive(:generate_xml).with("5").and_return("<xml></xml>")
+      datastream.should_receive(:generate_xml).with("5", {}).and_return("<xml></xml>")
       datastream.to_xml(:version => "5").should == "<xml></xml>"
     end
 
@@ -171,13 +243,13 @@ describe PachubeDataFormats::Datastream do
 
     it "should call the json generator with default version" do
       datastream = PachubeDataFormats::Datastream.new({})
-      datastream.should_receive(:generate_json).with("1.0.0").and_return({"title" => "Environment"})
+      datastream.should_receive(:generate_json).with("1.0.0", {}).and_return({"title" => "Environment"})
       datastream.as_json.should == {"title" => "Environment"}
     end
 
     it "should accept optional json version" do
       datastream = PachubeDataFormats::Datastream.new({})
-      datastream.should_receive(:generate_json).with("0.6-alpha").and_return({"title" => "Environment"})
+      datastream.should_receive(:generate_json).with("0.6-alpha", {}).and_return({"title" => "Environment"})
       datastream.as_json(:version => "0.6-alpha").should == {"title" => "Environment"}
     end
 

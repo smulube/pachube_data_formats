@@ -24,6 +24,9 @@ RSpec::Matchers.define :fully_represent_feed do |format, formatted_feed|
       feed.updated.should == environment.attributes["updated"].value
       feed.creator.should == environment.attributes["creator"].value
       feed.feed.should == environment.at_xpath("xmlns:feed").content
+      if auto_feed_url = environment.at_xpath("xmlns:auto_feed_url")
+        feed.auto_feed_url.should == auto_feed_url.content
+      end
       feed.status.should == environment.at_xpath("xmlns:status").content
       feed.description.should == environment.at_xpath("xmlns:description").content
       feed.icon.should == environment.at_xpath("xmlns:icon").content
@@ -32,13 +35,15 @@ RSpec::Matchers.define :fully_represent_feed do |format, formatted_feed|
       feed.private.should == environment.at_xpath("xmlns:private").content
       feed.tags.should == environment.xpath("xmlns:tag").map(&:content).sort{|a,b| a.downcase<=>b.downcase}.join(',')
       location = environment.at_xpath("xmlns:location")
-      feed.location_name.should == location.at_xpath("xmlns:name").content
-      feed.location_lat.should == location.at_xpath("xmlns:lat").content
-      feed.location_lon.should == location.at_xpath("xmlns:lon").content
-      feed.location_ele.should == location.at_xpath("xmlns:ele").content
-      feed.location_domain.should == location.attributes["domain"].value
-      feed.location_exposure.should == location.attributes["exposure"].value
-      feed.location_disposition.should == location.attributes["disposition"].value
+      if location
+        feed.location_name.should == location.at_xpath("xmlns:name").content
+        feed.location_lat.should == location.at_xpath("xmlns:lat").content
+        feed.location_lon.should == location.at_xpath("xmlns:lon").content
+        feed.location_ele.should == location.at_xpath("xmlns:ele").content
+        feed.location_domain.should == location.attributes["domain"].value
+        feed.location_exposure.should == location.attributes["exposure"].value
+        feed.location_disposition.should == location.attributes["disposition"].value
+      end
       feed.datastreams.each do |ds|
         data = environment.at_xpath("xmlns:data[@id=\"#{ds.id}\"]")
         ds.id.should == data.attributes["id"].value
@@ -51,8 +56,8 @@ RSpec::Matchers.define :fully_represent_feed do |format, formatted_feed|
         unit = data.at_xpath("xmlns:unit")
         if unit
           ds.unit_label.should == unit.content
-          ds.unit_type.should == unit.attributes["type"].value
-          ds.unit_symbol.should == unit.attributes["symbol"].value
+          ds.unit_type.should == unit.attributes["type"].value if unit.attributes["type"]
+          ds.unit_symbol.should == unit.attributes["symbol"].value if unit.attributes["symbol"]
         end
         ds.datapoints.each do |point|
           dp = data.at_xpath("xmlns:datapoints").at_xpath("xmlns:value[@at=\"#{point.at}\"]")
@@ -72,13 +77,15 @@ RSpec::Matchers.define :fully_represent_feed do |format, formatted_feed|
       feed.website.should == environment.at_xpath("xmlns:website").content
       feed.email.should == environment.at_xpath("xmlns:email").content
       location = environment.at_xpath("xmlns:location")
-      feed.location_name.should == location.at_xpath("xmlns:name").content
-      feed.location_lat.should == location.at_xpath("xmlns:lat").content
-      feed.location_lon.should == location.at_xpath("xmlns:lon").content
-      feed.location_ele.should == location.at_xpath("xmlns:ele").content
-      feed.location_domain.should == location.attributes["domain"].value
-      feed.location_exposure.should == location.attributes["exposure"].value
-      feed.location_disposition.should == location.attributes["disposition"].value
+      if location
+        feed.location_name.should == location.at_xpath("xmlns:name").content
+        feed.location_lat.should == location.at_xpath("xmlns:lat").content
+        feed.location_lon.should == location.at_xpath("xmlns:lon").content
+        feed.location_ele.should == location.at_xpath("xmlns:ele").content
+        feed.location_domain.should == location.attributes["domain"].value
+        feed.location_exposure.should == location.attributes["exposure"].value
+        feed.location_disposition.should == location.attributes["disposition"].value
+      end
       feed.datastreams.each do |ds|
         data = environment.at_xpath("xmlns:data[@id=\"#{ds.id}\"]")
         ds.id.should == data.attributes["id"].value
@@ -91,8 +98,8 @@ RSpec::Matchers.define :fully_represent_feed do |format, formatted_feed|
         unit = data.at_xpath("xmlns:unit")
         if unit
           ds.unit_label.should == unit.content
-          ds.unit_type.should == unit.attributes["type"].value
-          ds.unit_symbol.should == unit.attributes["symbol"].value
+          ds.unit_type.should == unit.attributes["type"].value if unit.attributes["type"]
+          ds.unit_symbol.should == unit.attributes["symbol"].value if unit.attributes["symbol"]
         end
       end
       true
@@ -112,6 +119,7 @@ RSpec::Matchers.define :fully_represent_feed do |format, formatted_feed|
       feed.website.should == json["website"]
       feed.private.should == json["private"]
       feed.feed.should == json["feed"]
+      feed.auto_feed_url.should == json["auto_feed_url"]
       no_units = true
       feed.datastreams.should_not be_empty
       feed.datastreams.each do |datastream|

@@ -7,7 +7,7 @@ describe "default feed xml templates" do
 
   context "0.5.1 (used by API V2)" do
     it "should be the default" do
-      @feed.should_receive(:generate_xml).with("0.5.1")
+      @feed.should_receive(:generate_xml).with("0.5.1", {})
       @feed.to_xml
     end
 
@@ -52,7 +52,7 @@ describe "default feed xml templates" do
       end
     end
 
-    %w(status feed description icon website email title).each do |node|
+    %w(status feed description icon website email title auto_feed_url).each do |node|
       it "should ignore blank '#{node}'" do
         @feed.send("#{node}=", nil)
         Nokogiri.parse(@feed.generate_xml("0.5.1")).xpath("//xmlns:#{node}").should be_blank
