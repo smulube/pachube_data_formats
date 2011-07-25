@@ -2,7 +2,7 @@ require File.dirname(__FILE__) + '/../spec_helper'
 
 describe PachubeDataFormats::Key do
   it "should have a constant that defines the allowed keys" do
-    PachubeDataFormats::Key::ALLOWED_KEYS.should == %w(expires_at feed_id id key permissions private_access referer source_ip datastream_id user)
+    PachubeDataFormats::Key::ALLOWED_KEYS.should == %w(expires_at feed_id id key label permissions private_access referer source_ip datastream_id user)
   end
 
   describe "validation" do
@@ -82,9 +82,16 @@ describe PachubeDataFormats::Key do
 
   describe "#as_json" do
     it "should call the json generator" do
-      key = PachubeDataFormats::Key.new({})
-      key.should_receive(:generate_json).and_return({"permissions" => [:get, :put]})
-      key.as_json.should == {"permissions" => [:get, :put]}
+      options = {:include_blanks => true}
+      key = PachubeDataFormats::Key.new
+      key.should_receive(:generate_json).with(options).and_return({"permissions" => [:get, :put]})
+      key.as_json(options).should == {"permissions" => [:get, :put]}
+    end
+
+    it "should accept *very* nil options" do
+      key = PachubeDataFormats::Key.new
+      key.should_receive(:generate_json).with({}).and_return({"permissions" => [:get, :put]})
+      key.as_json(nil).should == {"permissions" => [:get, :put]}
     end
   end
 
@@ -95,7 +102,7 @@ describe PachubeDataFormats::Key do
 
     it "should call #as_json" do
       key = PachubeDataFormats::Key.new(@key_hash)
-      key.should_receive(:as_json).with({})
+      key.should_receive(:as_json).with(nil)
       key.to_json
     end
 
